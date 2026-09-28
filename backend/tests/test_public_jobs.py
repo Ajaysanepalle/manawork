@@ -70,7 +70,26 @@ def client() -> Generator[TestClient, None, None]:
         engine.dispose()
 
 
-def test_public_search_matches_skills_and_excludes_drafts(client: TestClient) -> None:
+def _authenticate_as_user(client: TestClient) -> None:
+    db_gen = app.dependency_overrides[get_db]()
+    session = next(db_gen)
+    user = User(username="job-seeker", email="job-seeker@example.com", password_hash=hash_password("secret12"))
+    session.add(user)
+    session.flush()
+    refresh_token = new_secret()
+    auth_session = AuthSession(user_id=user.id, refresh_token_hash=hash_secret(refresh_token), expires_at=int(time()) + 3600)
+    session.add(auth_session)
+    session.commit()
+    client.cookies.set("mw_access", create_access_token(user.id, auth_session.id))
+    client.cookies.set("mw_refresh", refresh_token)
+    db_gen.close()
+
+
+def test_job_search_requires_auth_and_matches_skills(client: TestClient) -> None:
+    anonymous = client.get("/api/v1/jobs", params={"q": "FastAPI", "location": "Hyderabad"})
+    assert anonymous.status_code == 401
+
+    _authenticate_as_user(client)
     response = client.get("/api/v1/jobs", params={"q": "FastAPI", "location": "Hyderabad"})
 
     assert response.status_code == 200
@@ -89,6 +108,10 @@ def test_semantic_search_filters_unpublished_qdrant_points(client: TestClient, m
                 SimpleNamespace(id=published_id, score=0.94, payload={"status": "PUBLISHED", "title": "Backend Engineer"}),
                 SimpleNamespace(id=str(uuid4()), score=0.91, payload={"status": "DRAFT", "title": "Private draft"}),
             ]
+
+    anonymous = client.get("/api/v1/jobs/semantic-search", params={"q": "Python backend fresher"})
+    assert anonymous.status_code == 401
+    _authenticate_as_user(client)
 
     monkeypatch.setattr(jobs_endpoint, "embed_text", lambda query: [1.0, 0.0, 0.0])
     monkeypatch.setattr(jobs_endpoint, "QdrantVectorStore", FakeVectorStore)

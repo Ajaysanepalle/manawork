@@ -4,8 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.api.dependencies import get_current_user
 from app.db.session import get_db
 from app.models.job import Job, JobStatus
+from app.models.user import User
 from app.schemas.common import ApiResponse
 from app.schemas.job import JobListData
 from app.services.embeddings import EmbeddingUnavailableError, embed_text
@@ -16,6 +18,7 @@ router = APIRouter()
 
 @router.get("", response_model=ApiResponse[JobListData])
 def list_public_jobs(
+    _: User = Depends(get_current_user),
     q: str | None = Query(default=None, max_length=120),
     location: str | None = Query(default=None, max_length=120),
     mode: str | None = Query(default=None, pattern="^(remote|hybrid|onsite)$"),
@@ -44,6 +47,7 @@ def list_public_jobs(
 
 @router.get("/semantic-search")
 def semantic_job_search(
+    _: User = Depends(get_current_user),
     q: str = Query(min_length=3, max_length=500),
     limit: int = Query(default=10, ge=1, le=50),
 ) -> dict[str, object]:
@@ -70,7 +74,7 @@ def semantic_job_search(
 
 
 @router.get("/{job_id}")
-def get_public_job(job_id: UUID, db: Session = Depends(get_db)) -> dict[str, object]:
+def get_public_job(job_id: UUID, _: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, object]:
     job = db.get(Job, job_id)
     if not job or job.status != JobStatus.PUBLISHED:
         raise HTTPException(status_code=404, detail={"success": False, "message": "This role is no longer available", "error_code": "JOB_NOT_FOUND"})

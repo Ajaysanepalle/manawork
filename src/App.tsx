@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowDownUp, ArrowRight, ArrowUpRight, Bookmark, BriefcaseBusiness, Check, ChevronDown, Clock3, Code2, MapPin, Menu, Search, Sparkles, X } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -54,7 +54,8 @@ function DiscoveryPage({ savedJobs, onToggleSaved }: { savedJobs: Job[]; onToggl
   const [keywordInput, setKeywordInput] = useState('')
   const [locationInput, setLocationInput] = useState('')
   const [filters, setFilters] = useState<JobFilters>({ keyword: '', location: '', mode: 'all', sort: 'newest' })
-  const jobsQuery = useQuery({ queryKey: ['jobs', filters], queryFn: () => getJobs(filters) })
+  const currentUser = useQuery({ queryKey: ['current-user'], queryFn: getCurrentUser, retry: false, staleTime: 60_000 })
+  const jobsQuery = useQuery({ queryKey: ['jobs', filters], queryFn: () => getJobs(filters), enabled: Boolean(currentUser.data) })
   const jobs = jobsQuery.data?.jobs ?? []
   const featuredSkills = useMemo(() => ['Python', 'React', 'Data Analytics', 'Java', 'AI / ML', 'Cloud'], [])
 
@@ -85,9 +86,7 @@ function DiscoveryPage({ savedJobs, onToggleSaved }: { savedJobs: Job[]; onToggl
       <section className="jobs-section page-section" id="jobs">
         <div className="section-heading-row"><div><div className="eyebrow section-eyebrow">A GOOD PLACE TO BEGIN</div><h2>Opportunities worth<br className="mobile-break" /> a closer look<span className="heading-period">.</span></h2></div><Link className="text-link" to="/jobs">Explore all jobs <ArrowRight size={16} /></Link></div>
         <div className="filter-row"><div aria-label="Work arrangement" className="filter-tabs">{(['all', 'remote', 'onsite'] as const).map((mode) => <button aria-pressed={filters.mode === mode} className={filters.mode === mode ? 'filter-tab is-active' : 'filter-tab'} key={mode} onClick={() => setFilters((current) => ({ ...current, mode }))} type="button">{mode === 'all' ? 'All jobs' : mode === 'remote' ? 'Remote' : 'On-site'}</button>)}</div><label className="sort-control"><ArrowDownUp size={15} /><span className="sr-only">Sort jobs</span><select onChange={(event) => setFilters((current) => ({ ...current, sort: event.target.value as JobFilters['sort'] }))} value={filters.sort}><option value="newest">Most recent</option><option value="salary">Salary: high to low</option></select><ChevronDown size={14} /></label></div>
-        {jobsQuery.data?.isPreview && <div className="preview-note" role="status">Preview roles shown while the live jobs service is being connected.</div>}
-        {jobsQuery.isLoading ? <div aria-label="Loading jobs" className="jobs-grid">{[1, 2, 3].map((item) => <div className="job-skeleton" key={item} />)}</div> : jobs.length ? <div className="jobs-grid">{jobs.slice(0, 6).map((job, index) => <JobCard index={index} isSaved={savedJobs.some((saved) => saved.id === job.id)} job={job} key={job.id} onSave={() => onToggleSaved(job)} />)}</div> : <div className="empty-state"><Search size={22} /><h3>No roles found just yet.</h3><p>Try a broader title or nearby city.</p><button className="text-link" onClick={() => { setKeywordInput(''); setLocationInput(''); setFilters({ keyword: '', location: '', mode: 'all', sort: 'newest' }) }} type="button">Clear search <ArrowRight size={15} /></button></div>}
-        <div className="section-bottom"><span>{jobsQuery.data?.total ?? 0} roles to explore</span><Link className="button button-dark" to="/jobs">See all opportunities <ArrowRight size={16} /></Link></div>
+        {currentUser.isLoading ? <div className="jobs-access-prompt" role="status">Checking your sign-in…</div> : !currentUser.data ? <div className="jobs-access-prompt"><h3>Sign in to view job postings</h3><p>Sign in or create an account to explore available roles.</p><Link className="button button-primary" to="/login">Sign in to continue <ArrowRight size={16} /></Link></div> : <>{jobsQuery.data?.isPreview && <div className="preview-note" role="status">Preview roles shown while the live jobs service is being connected.</div>}{jobsQuery.isLoading ? <div aria-label="Loading jobs" className="jobs-grid">{[1, 2, 3].map((item) => <div className="job-skeleton" key={item} />)}</div> : jobs.length ? <div className="jobs-grid">{jobs.slice(0, 6).map((job, index) => <JobCard index={index} isSaved={savedJobs.some((saved) => saved.id === job.id)} job={job} key={job.id} onSave={() => onToggleSaved(job)} />)}</div> : <div className="empty-state"><Search size={22} /><h3>No roles found just yet.</h3><p>Try a broader title or nearby city.</p><button className="text-link" onClick={() => { setKeywordInput(''); setLocationInput(''); setFilters({ keyword: '', location: '', mode: 'all', sort: 'newest' }) }} type="button">Clear search <ArrowRight size={15} /></button></div>}<div className="section-bottom"><span>{jobsQuery.data?.total ?? 0} roles to explore</span><Link className="button button-dark" to="/jobs">See all opportunities <ArrowRight size={16} /></Link></div></>}
       </section>
       <section className="career-band" id="career-tools"><div className="career-band-copy"><div className="eyebrow eyebrow-light">MORE THAN A JOB BOARD</div><h2>A career is built<br />one good move at a time.</h2><p>Make your next move with tools that meet you where you are, whether that's your first resume or your next big interview.</p><button className="button button-paper" onClick={() => setComingSoonOpen(true)} type="button">Explore career tools <ArrowRight size={16} /></button></div><div className="career-tools-grid"><button className="career-tool" onClick={() => setComingSoonOpen(true)} type="button"><span className="tool-symbol tool-coral"><Code2 size={20} /></span><span className="tool-number">01</span><strong>Know your resume</strong><small>Make every skill count.</small><ArrowUpRight className="tool-arrow" size={17} /></button><button className="career-tool" id="roadmaps" onClick={() => setComingSoonOpen(true)} type="button"><span className="tool-symbol tool-lime"><ArrowUpRight size={20} /></span><span className="tool-number">02</span><strong>Find your next skill</strong><small>A roadmap with a reason.</small><ArrowUpRight className="tool-arrow" size={17} /></button><button className="career-tool" onClick={() => setComingSoonOpen(true)} type="button"><span className="tool-symbol tool-sky"><Sparkles size={20} /></span><span className="tool-number">03</span><strong>Talk it through</strong><small>Career guidance in your language.</small><ArrowUpRight className="tool-arrow" size={17} /></button></div></section>
       <section className="skills-section page-section"><div className="skills-heading"><div><div className="eyebrow section-eyebrow">SKILLS THAT OPEN DOORS</div><h2>Start with what<br />you want to learn<span className="heading-period">.</span></h2></div><p>Explore the skills employers are looking for, then find a path that feels right for you.</p></div><div className="skills-list">{featuredSkills.map((skill, index) => <Link key={skill} to={`/jobs?skill=${encodeURIComponent(skill)}`}><span className="skill-index">0{index + 1}</span><span>{skill}</span><ArrowUpRight size={16} /></Link>)}</div></section>
@@ -99,8 +98,11 @@ function DiscoveryPage({ savedJobs, onToggleSaved }: { savedJobs: Job[]; onToggl
 
 function JobDetailPage({ savedJobIds, onToggleSaved }: { savedJobIds: string[]; onToggleSaved: (job: Job) => void }) {
   const { jobId } = useParams()
-  const query = useQuery({ queryKey: ['jobs', 'detail', jobId], queryFn: () => getJob(jobId ?? ''), enabled: Boolean(jobId) })
+  const currentUser = useQuery({ queryKey: ['current-user'], queryFn: getCurrentUser, retry: false, staleTime: 60_000 })
+  const query = useQuery({ queryKey: ['jobs', 'detail', jobId], queryFn: () => getJob(jobId ?? ''), enabled: Boolean(jobId && currentUser.data) })
   const job = query.data
+  if (currentUser.isLoading) return <main className="detail-loading">Checking your sign-in…</main>
+  if (!currentUser.data) return <Navigate replace to="/login" />
   if (query.isLoading) return <main className="detail-loading">Loading opportunity…</main>
   if (!job) return <main className="detail-loading"><h1>This role has moved on.</h1><Link className="text-link" to="/jobs">Browse open roles <ArrowRight size={16} /></Link></main>
   const isSaved = savedJobIds.includes(job.id)
@@ -108,6 +110,9 @@ function JobDetailPage({ savedJobIds, onToggleSaved }: { savedJobIds: string[]; 
 }
 
 function SavedJobsPage({ jobs, onToggleSaved }: { jobs: Job[]; onToggleSaved: (job: Job) => void }) {
+  const currentUser = useQuery({ queryKey: ['current-user'], queryFn: getCurrentUser, retry: false, staleTime: 60_000 })
+  if (currentUser.isLoading) return <main className="detail-loading">Checking your sign-in…</main>
+  if (!currentUser.data) return <Navigate replace to="/login" />
   return <main className="saved-page page-section"><Link className="back-link" to="/jobs">← Back to opportunities</Link><div className="section-heading-row"><div><div className="eyebrow section-eyebrow">YOUR SHORTLIST</div><h1>Saved jobs<span className="heading-period">.</span></h1></div><span className="saved-page-count">{jobs.length} {jobs.length === 1 ? 'job' : 'jobs'}</span></div>{jobs.length ? <div className="jobs-grid">{jobs.map((job, index) => <JobCard index={index} isSaved job={job} key={job.id} onSave={() => onToggleSaved(job)} />)}</div> : <div className="empty-state"><Bookmark size={22} /><h3>No saved jobs yet.</h3><p>Save roles you want to come back to and they’ll appear here.</p><Link className="button button-primary" to="/jobs">Explore jobs <ArrowRight size={16} /></Link></div>}</main>
 }
 

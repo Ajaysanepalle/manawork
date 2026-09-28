@@ -46,7 +46,8 @@ export async function getJobs(filters: JobFilters): Promise<{ jobs: Job[]; total
   try {
     const response = await axios.get<JobsResponse>('/api/v1/jobs', { params: { q: filters.keyword || undefined, location: filters.location || undefined, mode: filters.mode === 'all' ? undefined : filters.mode, sort: filters.sort } })
     return { jobs: response.data.data.items, total: response.data.data.total, isPreview: false }
-  } catch {
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) throw error
     const keyword = filters.keyword.toLocaleLowerCase()
     const location = filters.location.toLocaleLowerCase()
     const jobs = sampleJobs.filter((job) => {
@@ -64,7 +65,8 @@ export async function getJob(jobId: string): Promise<Job | null> {
   try {
     const response = await axios.get<{ success: boolean; data: { job: Job } }>(`/api/v1/jobs/${jobId}`)
     return response.data.data.job
-  } catch {
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) throw error
     return sampleJobs.find((job) => job.id === jobId) ?? null
   }
 }
