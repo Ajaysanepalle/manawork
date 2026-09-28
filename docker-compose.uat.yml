@@ -1,0 +1,51 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    ports:
+      - "${UAT_FRONTEND_PORT:-3080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      APP_ENV: uat
+      DEBUG: "false"
+      DATABASE_URL: ${UAT_DATABASE_URL:?Set a dedicated UAT_DATABASE_URL}
+      REDIS_URL: ${UAT_REDIS_URL:?Set a dedicated UAT_REDIS_URL}
+      CORS_ORIGINS: ${UAT_CORS_ORIGINS:?Set UAT_CORS_ORIGINS}
+      FRONTEND_URL: ${UAT_FRONTEND_URL:?Set UAT_FRONTEND_URL}
+      JWT_SECRET: ${UAT_JWT_SECRET:?Set a unique UAT_JWT_SECRET}
+      SESSION_SECRET: ${UAT_SESSION_SECRET:?Set a unique UAT_SESSION_SECRET}
+      GOOGLE_CLIENT_ID: ${UAT_GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${UAT_GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${UAT_GOOGLE_CALLBACK_URL:-}
+      QDRANT_URL: ${UAT_QDRANT_URL:?Set an isolated UAT QDRANT_URL}
+      QDRANT_API_KEY: ${UAT_QDRANT_API_KEY:-}
+      QDRANT_VECTOR_SIZE: ${QDRANT_VECTOR_SIZE:-768}
+      OLLAMA_BASE_URL: ${UAT_OLLAMA_BASE_URL:-http://ollama:11434}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+    ports:
+      - "${UAT_API_PORT:-8080}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  worker:
+    build:
+      context: ./backend
+    command: celery -A app.tasks.worker.celery_app worker --loglevel=info
+    environment:
+      APP_ENV: uat
+      DATABASE_URL: ${UAT_DATABASE_URL:?Set a dedicated UAT_DATABASE_URL}
+      REDIS_URL: ${UAT_REDIS_URL:?Set a dedicated UAT_REDIS_URL}
+      QDRANT_URL: ${UAT_QDRANT_URL:?Set an isolated UAT QDRANT_URL}
+      JWT_SECRET: ${UAT_JWT_SECRET:?Set a unique UAT_JWT_SECRET}
+      SESSION_SECRET: ${UAT_SESSION_SECRET:?Set a unique UAT_SESSION_SECRET}

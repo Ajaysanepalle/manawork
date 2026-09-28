@@ -1,0 +1,55 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PROD_FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: ./backend
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DEBUG: "false"
+      DATABASE_URL: ${PROD_DATABASE_URL:?Set a dedicated production DATABASE_URL}
+      REDIS_URL: ${PROD_REDIS_URL:?Set a dedicated production REDIS_URL}
+      CORS_ORIGINS: ${PROD_CORS_ORIGINS:?Set production CORS origins}
+      FRONTEND_URL: ${PROD_FRONTEND_URL:?Set the production frontend URL}
+      JWT_SECRET: ${PROD_JWT_SECRET:?Set a unique production JWT secret}
+      SESSION_SECRET: ${PROD_SESSION_SECRET:?Set a unique production session secret}
+      AUTH_COOKIE_DOMAIN: ${PROD_AUTH_COOKIE_DOMAIN:-}
+      GOOGLE_CLIENT_ID: ${PROD_GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${PROD_GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_CALLBACK_URL: ${PROD_GOOGLE_CALLBACK_URL:-}
+      QDRANT_URL: ${PROD_QDRANT_URL:?Set an isolated production QDRANT_URL}
+      QDRANT_API_KEY: ${PROD_QDRANT_API_KEY:?Set the production Qdrant API key}
+      QDRANT_VECTOR_SIZE: ${QDRANT_VECTOR_SIZE:-768}
+      OLLAMA_BASE_URL: ${PROD_OLLAMA_BASE_URL:?Set the production Ollama endpoint}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-nomic-embed-text}
+    ports:
+      - "${PROD_API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  worker:
+    build:
+      context: ./backend
+    command: celery -A app.tasks.worker.celery_app worker --loglevel=info
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: ${PROD_DATABASE_URL:?Set a dedicated production DATABASE_URL}
+      REDIS_URL: ${PROD_REDIS_URL:?Set a dedicated production REDIS_URL}
+      QDRANT_URL: ${PROD_QDRANT_URL:?Set an isolated production QDRANT_URL}
+      JWT_SECRET: ${PROD_JWT_SECRET:?Set a unique production JWT secret}
+      SESSION_SECRET: ${PROD_SESSION_SECRET:?Set a unique production session secret}
