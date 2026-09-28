@@ -52,7 +52,7 @@ export function AuthPage({ mode = 'login' }: AuthPageProps) {
     <span className="eyebrow section-eyebrow">WELCOME TO MANAWORKS</span>
     <h2>{signupMode ? 'Create your account' : 'Sign in to continue'}</h2>
     <p className="auth-subtitle">{signupMode ? 'Sign up with Google or create an account with your email.' : 'Continue with Google or sign in with your email.'}</p>
-    {googleConfigured ? <a className="google-button" href="https://manawork.onrender.com/api/v1/auth/google/start"><span className="google-g">G</span>{signupMode ? 'Sign up with Google' : 'Continue with Google'}<ArrowUpRight size={15} /></a> : <button className="google-button is-unavailable" disabled type="button"><span className="google-g">G</span>{providerStatus.isLoading ? 'Checking Google sign-in…' : 'Google sign-in is not configured'}</button>}
+    {googleConfigured ? <a className="google-button" href="/api/v1/auth/google/start"><span className="google-g">G</span>{signupMode ? 'Sign up with Google' : 'Continue with Google'}<ArrowUpRight size={15} /></a> : <button className="google-button is-unavailable" disabled type="button"><span className="google-g">G</span>{providerStatus.isLoading ? 'Checking Google sign-in…' : 'Google sign-in is not configured'}</button>}
     <div className="or-divider"><span /><em>or</em><span /></div>
     <form onSubmit={(event) => void onSubmit(event)}>
       {signupMode && <label className="form-label">Full name<input autoComplete="name" onChange={(event) => setFullName(event.target.value)} required value={fullName} /></label>}
