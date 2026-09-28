@@ -1,32 +1,105 @@
-# Logs
-logs
-*.log
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+.envrc
+.streamlit/secrets.toml
+.pypirc
+
+# Node.js
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
+dist/
+dist-ssr/
 *.local
-.env*
-!.env.example
-.venv/
+
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.dmypy.json
+.pyre/
+.pytype/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.eggs/
+wheels/
+build/
+develop-eggs/
+dist/
+downloads/
+parts/
+sdist/
+var/
+*.egg
+.installed.cfg
+MANIFEST
+pip-log.txt
+.pytest_cache/
+.hypothesis/
+.ipynb_checkpoints
+.python-version
 
-# Editor directories and files
+# Logs and databases
+logs/
+*.log
+db.sqlite3
+db.sqlite3-journal
+*.rdb
+*.aof
+*.pid
+
+# Editors and operating systems
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+tempCodeRunnerFile.py
+
+# Documentation build
+docs/_build/
+.site/
+
+# Other environments and tools
+.cursor/
+.pdm-python
+.pdm-build/
+.pixi/
+__pypackages__/
+.spyderproject
+.spyproject
+.ropeproject
+.abstra/
+celerybeat-schedule
+celerybeat.pid
+mnesia/
+rabbitmq/
+rabbitmq-data/
+activemq-data/
+cython_debug/
+.pybuilder/
+target/
